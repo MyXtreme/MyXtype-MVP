@@ -1,51 +1,120 @@
-const quote = "The quick brown fox jumps over the lazy dog.";
+const quotes = [
+    "The quick brown fox jumps over the lazy dog.",
+    "JavaScript is fun but tricky.",
+    "Typing fast takes practice."
+];
+
 const quoteElement = document.getElementById("quote");
-const inputElement = document.getElementById("input");
 const resultElement = document.getElementById("result");
 const timerElement = document.getElementById("timer");
+const resetBtn = document.getElementById("reset");
+const nextBtn = document.getElementById("next");    
 
 let startTime = null;
 let ended = false;
+let currentQuoteIndex = 0;
+let timerID;
+let currentCharIndex = 0;
 
+textRender(quotes[currentQuoteIndex]);
 
-inputElement.addEventListener("input", ()=> {
-    const input = inputElement.value;
+resetBtn.addEventListener("click", () => {
+    resetTest();
+    resetBtn.blur()
+});
+nextBtn.addEventListener("click", () => {
+    nextTest();
+    nextBtn.blur()
+});
 
-    if(!startTime && input.length > 0) {
+function resetTest() {
+    stopTimer(timerID);
+    startTime = null;
+    ended = false;
+    timerElement.textContent = '00:00';
+    currentCharIndex = 0;
+    resultElement.textContent = "";
+
+    const spans = quoteElement.querySelectorAll("span");
+    spans.forEach(span => span.classList.remove("correct", "incorrect"))
+}
+
+function nextTest() {
+    currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+    textRender(quotes[currentQuoteIndex]);
+    resetTest();
+}
+
+function startTimer() {
+    timerID = setInterval(() => {
+        const timeStamp = new Date();
+        const timePassed = Math.floor((timeStamp - startTime) / 1000);
+        const seconds = timePassed % 60;
+        const minutes = Math.floor(timePassed / 60);
+        timerElement.textContent = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    }, 1000);
+}
+
+function stopTimer() {
+    clearInterval(timerID);
+}
+
+function textRender(quote) {
+    quoteElement.innerHTML = "";
+
+    const fragment = document.createDocumentFragment();
+
+    Array.from(quote).forEach(char => {
+        const span = document.createElement("span");
+        span.textContent = char;
+        fragment.appendChild(span)
+    });
+
+    quoteElement.appendChild(fragment);
+}
+
+document.addEventListener("keydown", (e) => {
+    if(ended) return;
+
+    const spans = quoteElement.querySelectorAll("span");
+
+    if (!startTime) {
         startTime = new Date();
         startTimer();
-        
     }
 
-    function startTimer() {
-        timerID = setInterval(()=>{
-            const timeStamp = new Date();
-            const timePassed = Math.floor((timeStamp-startTime) / 1000);
-            const secunde = timePassed % 60;
-            const minute = Math.floor(timePassed / 60);
-
-            timerElement.textContent = `${minute.toString().padStart(2,'0')}:${secunde.toString().padStart(2,'0')}`
-        },1000);
+    if(e.key === "Backspace") {
+        if(currentCharIndex > 0) {
+            currentCharIndex --;
+            spans[currentCharIndex].classList.remove("correct", "incorrect");
+        }
+        return;
     }
 
-    function stopTimer() {
-        clearInterval(timerID);
+    const expectedChar = spans[currentCharIndex].innerText;
+    const typedChar = e.key;
+
+    if(typedChar.length === 1) {
+        if(typedChar === expectedChar) {
+            spans[currentCharIndex].classList.add("correct");
+        }
+        else {
+            spans[currentCharIndex].classList.add("incorrect");
+        }
+        currentCharIndex ++;
     }
 
-    if(input === quote) {
-        if(!ended){
+    if (currentCharIndex >= spans.length) {
+        if (!ended) {
             ended = true;
             const endTime = new Date();
             const timeTaken = (endTime - startTime) / 1000;
 
-            const words = quote.split(" ").length;
-            const wpm = Math.round((words/timeTaken) * 60);
+            const words = quotes[currentQuoteIndex].split(" ").length;
+            const wpm = Math.round((words / timeTaken) * 60);
 
-            resultElement.textContent = `wpm: ${wpm}`;
-
-            inputElement.disabled = true;
-            stopTimer();    
-
+            resultElement.textContent = `WPM: ${wpm}`;
+            stopTimer();
         }
     }
 });
