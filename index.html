@@ -8,14 +8,32 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
+        <header class="header">
+            <h1>MyXtype</h1>
+            
+            <div class="header-right">
+                <div class="dropdown">
+                <img src="imgs/keyboard.png" id="mode" alt="Modes">
+                <ul id="mode-list" class="dropdown-list">
+                    <li data-mode="classic">Classic</li>
+                    <li data-mode="story">Story Mode</li>
+                    <li data-mode="race">Race Mode</li>
+                    <li data-mode="chat">Chat Mode</li>
+                </ul>
+                </div>
+
+                <img src="imgs/user.png" id="profile" alt="Profile">
+            </div>
+        </header>
         <main class="main">
             <h1>Typing Test</h1>
 
             <div id="timer">0:00</div>
             <div id="quote"></div>
-            <button id="reset">reset</button>
-            <button id="next">next</button>
-
+            <div id="buttons">
+                <button id="reset">reset</button>
+                <button id="next">next</button>
+            </div>
             <div id="result"></div>
         </main>
         <script src="script.js"></script>

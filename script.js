@@ -8,7 +8,9 @@ const quoteElement = document.getElementById("quote");
 const resultElement = document.getElementById("result");
 const timerElement = document.getElementById("timer");
 const resetBtn = document.getElementById("reset");
-const nextBtn = document.getElementById("next");    
+const nextBtn = document.getElementById("next");
+const modeBtn = document.getElementById("mode");
+const dropdown = modeBtn.parentElement;
 
 let startTime = null;
 let ended = false;
@@ -18,6 +20,25 @@ let currentCharIndex = 0;
 
 textRender(quotes[currentQuoteIndex]);
 
+modeBtn.addEventListener("click", () => {
+  dropdown.classList.toggle("open");
+});
+
+document.addEventListener("click", (e) => {
+  if (!dropdown.contains(e.target)) {
+    dropdown.classList.remove("open");
+  }
+});
+
+const modeList = document.getElementById("mode-list");
+modeList.addEventListener("click", (e) => {
+  if (e.target.tagName === "LI") {
+    const selectedMode = e.target.dataset.mode;
+    console.log("Selected mode:", selectedMode);
+    dropdown.classList.remove("open");
+    // TODO: switch mode logic here
+  }
+});
 resetBtn.addEventListener("click", () => {
     resetTest();
     resetBtn.blur()
