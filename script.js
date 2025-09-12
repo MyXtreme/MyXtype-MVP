@@ -36,7 +36,8 @@ function resetTest() {
     resultElement.textContent = "";
 
     const spans = quoteElement.querySelectorAll("span");
-    spans.forEach(span => span.classList.remove("correct", "incorrect"))
+    spans.forEach(span => span.classList.remove("correct", "incorrect", "active"))
+    spans[currentCharIndex].classList.add("active")
 }
 
 function nextTest() {
@@ -71,6 +72,9 @@ function textRender(quote) {
     });
 
     quoteElement.appendChild(fragment);
+
+    currentCharIndex = 0;
+    quoteElement.querySelector("span").classList.add("active");
 }
 
 document.addEventListener("keydown", (e) => {
@@ -85,8 +89,10 @@ document.addEventListener("keydown", (e) => {
 
     if(e.key === "Backspace") {
         if(currentCharIndex > 0) {
+            spans[currentCharIndex].classList.remove("active");
             currentCharIndex --;
             spans[currentCharIndex].classList.remove("correct", "incorrect");
+            spans[currentCharIndex].classList.add("active");
         }
         return;
     }
@@ -101,7 +107,12 @@ document.addEventListener("keydown", (e) => {
         else {
             spans[currentCharIndex].classList.add("incorrect");
         }
+        spans[currentCharIndex].classList.remove("active");
         currentCharIndex ++;
+        if (currentCharIndex < spans.length) {
+            spans[currentCharIndex].classList.add("active");
+        }
+        
     }
 
     if (currentCharIndex >= spans.length) {
