@@ -71,7 +71,7 @@ body {
 }
 
 .main {
-  width: 600px;
+  width: 100%;
   margin-top: 1rem;
   background: white;
   display: flex;
@@ -93,7 +93,13 @@ body {
   font-family: monospace; 
   white-space: pre-wrap;
   text-align: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  display: block;
+
 }
+
 
 #quote span {
   color: #bbb
@@ -145,4 +151,8 @@ button:hover {
   margin: 20px 0;
   font-weight: bold;
   text-align: center;
+}
+
+.typing-line {
+  
 }
