@@ -47,7 +47,7 @@ const typingEngineState = {
     charOffset: 0,
     wordstoGenerate: 60,
     visibleLinesIndex: 0,
-    maxVisibleLines: 8,
+    maxVisibleLines: 3,
     lines: []
 };
 
@@ -61,20 +61,16 @@ function startTest() {
 
 function startEngine() {
     //typingEngineState.mode = mode;
-    typingEngineState.text = "Hey, look at this! :) "+textGenerator();
+    typingEngineState.text = textGenerator();
 
     typingEngineState.index = 0;
     typingEngineState.started = false;
     typingEngineState.ended = false;
     typingEngineState.startTime = null;
     typingEngineState.charResults = [];
-    typingEngineState.duration = 30;
+    typingEngineState.duration = 60;
     typingEngineState.timeLeft = typingEngineState.duration;
-
-     requestAnimationFrame(() => {
-        typingEngineState.lines = buildLines(typingEngineState.text);
-        render();
-    });
+    typingEngineState.lines = buildLines(typingEngineState.text);
 }
 
 function handleCharInput(typedChar) {
@@ -87,12 +83,14 @@ function handleCharInput(typedChar) {
 
     typingEngineState.index ++;
 
-    
-    if (typingEngineState.index > typingEngineState.text.length - 200){
+    const lastVisibleLine = typingEngineState.visibleLinesIndex + typingEngineState.maxVisibleLines;
+    const totalLines = typingEngineState.lines.length;
+    if (totalLines - lastVisibleLine < 5){
         typingEngineState.text += textGenerator();
         typingEngineState.lines = buildLines(typingEngineState.text);
     }
     updateWindow(typingEngineState.lines);
+
     /*if (typingEngineState.index >= typingEngineState.text.length) {
         typingEngineState.ended = true;
         stopTimer();
