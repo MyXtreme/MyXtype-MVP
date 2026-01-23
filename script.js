@@ -14,6 +14,7 @@ const resetBtn = document.getElementById("reset");
 const nextBtn = document.getElementById("next");
 const modeBtn = document.getElementById("mode");
 const modeList = document.getElementById("mode-list");
+const caret = document.getElementById("caret");
 const dropdown = modeBtn.parentElement;
 
 const measurer = document.createElement("span");
@@ -41,10 +42,10 @@ const typingEngineState = {
     startTime: null,
     ended: false,   //test
     charResults: [],
+    visibleCharMap: [],
     duration: 30,
     timeLeft: 30,
 
-    charOffset: 0,
     wordstoGenerate: 60,
     visibleLinesIndex: 0,
     maxVisibleLines: 3,
@@ -64,13 +65,18 @@ function startEngine() {
     typingEngineState.text = textGenerator();
 
     typingEngineState.index = 0;
+    typingEngineState.visibleLinesIndex = 0;
     typingEngineState.started = false;
     typingEngineState.ended = false;
     typingEngineState.startTime = null;
     typingEngineState.charResults = [];
+    typingEngineState.visibleCharMap = [];
     typingEngineState.duration = 60;
     typingEngineState.timeLeft = typingEngineState.duration;
+
+
     typingEngineState.lines = buildLines(typingEngineState.text);
+
 }
 
 function handleCharInput(typedChar) {
@@ -196,10 +202,27 @@ function updateWindow(lines) {
     }
 }
 
+function updateCaretPosition() {
+    const span = typingEngineState.visibleCharMap[typingEngineState.index];
+    if (!span) return;
+
+    const spanRect = span.getBoundingClientRect();
+    const containerRect = textElement.getBoundingClientRect();
+
+    const x = spanRect.left - containerRect.left;
+    const y = spanRect.top - containerRect.top;
+
+    caret.style.transform = `translate(${x}px, ${y}px)`;
+    caret.style.height = spanRect.height + "px";
+}
+
 
 //Mode renderer
 function renderClassic() {
+    const caretNode = caret;
     textElement.innerHTML = "";
+    textElement.appendChild(caretNode);
+    typingEngineState.visibleCharMap = [];
 
 
     
@@ -230,10 +253,11 @@ function renderClassic() {
                 } else {
                     span.classList.add("incorrect");
                 }
-            } else if (realIndex === typingEngineState.index && !typingEngineState.ended){
+            } /*else if (realIndex === typingEngineState.index && !typingEngineState.ended){
                 span.classList.add("active");
-            }
+            }*/
 
+            typingEngineState.visibleCharMap[realIndex] = span;
             fragment.appendChild(span);
         });
 
@@ -272,6 +296,7 @@ function setMode(mode) {
     currentMode = mode;
     modes[mode].start();
     modes[mode].render();
+    updateCaretPosition();
 }
 
 modeList.addEventListener("click", (e) => {
@@ -315,6 +340,7 @@ function resetTest() {
     timerElement.textContent = '0:30';
     resultElement.textContent = "";
     render();
+    updateCaretPosition();
 }
 
 function nextTest() {
@@ -322,6 +348,7 @@ function nextTest() {
     timerElement.textContent = '0:30';
     resultElement.textContent = "";
     render();
+    updateCaretPosition();
 }
 
 function startTimer() {
@@ -374,6 +401,9 @@ document.addEventListener("keydown", (e) => {
     }
 
     render();
+    requestAnimationFrame(() => {
+        updateCaretPosition();
+    });
 });
 
 function getRandomInt(min, max) {
