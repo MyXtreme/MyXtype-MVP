@@ -84,10 +84,22 @@ function handleCharInput(typedChar) {
     if (!typingEngineState.started) startTest();
 
 
-    const expectedChar = typingEngineState.text[typingEngineState.index]
-    typingEngineState.charResults[typingEngineState.index] = typedChar === expectedChar;
+    const index = typingEngineState.index;
+    const expectedChar = typingEngineState.text[index];
+    const isCorrect = typedChar === expectedChar;
 
-    typingEngineState.index ++;
+    typingEngineState.charResults[index] = isCorrect;
+
+    if (expectedChar === " ") {
+        if (isCorrect) {
+            typingEngineState.index++;
+        } else {
+            //wrong space no advancing
+            return;
+        }
+    } else {
+        typingEngineState.index++;
+    }
 
     const lastVisibleLine = typingEngineState.visibleLinesIndex + typingEngineState.maxVisibleLines;
     const totalLines = typingEngineState.lines.length;
@@ -203,17 +215,31 @@ function updateWindow(lines) {
 }
 
 function updateCaretPosition() {
-    const span = typingEngineState.visibleCharMap[typingEngineState.index];
-    if (!span) return;
-
-    const spanRect = span.getBoundingClientRect();
+    const i = typingEngineState.index;
+    const map = typingEngineState.visibleCharMap;
     const containerRect = textElement.getBoundingClientRect();
 
-    const x = spanRect.left - containerRect.left;
-    const y = spanRect.top - containerRect.top;
+    if(map[i]) {
+        const span = map[i];
+        const spanRect = span.getBoundingClientRect();
 
-    caret.style.transform = `translate(${x}px, ${y}px)`;
-    caret.style.height = spanRect.height + "px";
+        caret.style.transform =
+            `translate(${spanRect.left - containerRect.left}px,
+                        ${spanRect.top - containerRect.top}px)`;
+        caret.style.height = spanRect.height + "px";
+        return;
+    }
+
+    const prev = map[i-1];
+    if(!prev) return;
+
+    const prevRect = prev.getBoundingClientRect();
+
+    caret.style.transform = 
+        `translate(${prevRect.right - containerRect.left}px, 
+                    ${prevRect.top - containerRect.top}px)`;
+    caret.style.height = prevRect.height + "px";
+    
 }
 
 
