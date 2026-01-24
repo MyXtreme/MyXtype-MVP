@@ -31,6 +31,7 @@ document.body.appendChild(measurer);
 
 let currentMode = "classic";
 let timerID = null;
+let caretMoveTimeout = null;
 
 
 
@@ -51,6 +52,20 @@ const typingEngineState = {
     maxVisibleLines: 3,
     lines: []
 };
+
+const renderState= {
+    onlyCharChange: true,
+    prevIndex: 0,
+    newIndex: 0,
+    deltas: [],
+    layoutDirty: false
+}
+
+function resetRenderState() {
+    renderState.onlyCharChange = true;
+    renderState.deltas = [];
+    renderState.layoutDirty = false;
+}
 
 // Engine logic
 
@@ -77,6 +92,8 @@ function startEngine() {
 
     typingEngineState.lines = buildLines(typingEngineState.text);
 
+    renderState.layoutDirty = true;
+
 }
 
 function handleCharInput(typedChar) {
@@ -89,16 +106,14 @@ function handleCharInput(typedChar) {
     const isCorrect = typedChar === expectedChar;
 
     typingEngineState.charResults[index] = isCorrect;
-
-    if (expectedChar === " ") {
-        if (isCorrect) {
-            typingEngineState.index++;
-        } else {
-            //wrong space no advancing
-            return;
-        }
+    if (expectedChar === " " && !isCorrect) {
+        return;
     } else {
+        renderState.prevIndex = typingEngineState.index;
         typingEngineState.index++;
+        renderState.newIndex = typingEngineState.index;
+        renderState.onlyCharChange = true;
+        renderState.deltas.push({type: "type", index: renderState.prevIndex});
     }
 
     const lastVisibleLine = typingEngineState.visibleLinesIndex + typingEngineState.maxVisibleLines;
@@ -107,8 +122,13 @@ function handleCharInput(typedChar) {
         typingEngineState.text += textGenerator();
         typingEngineState.lines = buildLines(typingEngineState.text);
     }
+    const oldLine = typingEngineState.visibleLinesIndex;
     updateWindow(typingEngineState.lines);
 
+    if(typingEngineState.visibleLinesIndex !== oldLine) {
+        renderState.onlyCharChange = false;
+        renderState.layoutDirty = true;
+    }
     /*if (typingEngineState.index >= typingEngineState.text.length) {
         typingEngineState.ended = true;
         stopTimer();
@@ -119,8 +139,12 @@ function handleCharInput(typedChar) {
 
 function handleBackspace() {
     if (typingEngineState.index > 0) {
+        renderState.prevIndex = typingEngineState.index;
         typingEngineState.index--;
         typingEngineState.charResults.pop();
+        renderState.newIndex = typingEngineState.index;
+        renderState.onlyCharChange = true;
+        renderState.deltas.push({type: "backspace", index: renderState.newIndex});
     }
 }
 
@@ -218,6 +242,7 @@ function updateCaretPosition() {
     const i = typingEngineState.index;
     const map = typingEngineState.visibleCharMap;
     const containerRect = textElement.getBoundingClientRect();
+    caret.classList.add("moving");
 
     if(map[i]) {
         const span = map[i];
@@ -227,6 +252,11 @@ function updateCaretPosition() {
             `translate(${spanRect.left - containerRect.left}px,
                         ${spanRect.top - containerRect.top}px)`;
         caret.style.height = spanRect.height + "px";
+
+        if (caretMoveTimeout) clearTimeout(caretMoveTimeout);
+        caretMoveTimeout = setTimeout(() => {
+            caret.classList.remove("moving");
+        }, 240);
         return;
     }
 
@@ -239,12 +269,18 @@ function updateCaretPosition() {
         `translate(${prevRect.right - containerRect.left}px, 
                     ${prevRect.top - containerRect.top}px)`;
     caret.style.height = prevRect.height + "px";
-    
+
+
+    if (caretMoveTimeout) clearTimeout(caretMoveTimeout);
+    caretMoveTimeout = setTimeout(() => {
+        caret.classList.remove("moving");
+    }, 120);
+
 }
 
 
 //Mode renderer
-function renderClassic() {
+function renderClassicMode() {
     const caretNode = caret;
     textElement.innerHTML = "";
     textElement.appendChild(caretNode);
@@ -279,9 +315,7 @@ function renderClassic() {
                 } else {
                     span.classList.add("incorrect");
                 }
-            } /*else if (realIndex === typingEngineState.index && !typingEngineState.ended){
-                span.classList.add("active");
-            }*/
+            }
 
             typingEngineState.visibleCharMap[realIndex] = span;
             fragment.appendChild(span);
@@ -292,9 +326,41 @@ function renderClassic() {
 
         textElement.appendChild(div);
     });
-
+    resetRenderState();
     
-}       
+} 
+
+function renderDeltaBatch() {
+    for(d of renderState.deltas) {
+        const dIndex = d.index;
+        const dSpan = typingEngineState.visibleCharMap[dIndex];
+
+        if(!dSpan) return;
+
+        if(d.type === "type") {
+            dSpan.classList.remove("correct", "incorrect");
+
+            if (typingEngineState.charResults[dIndex] === true) {
+                dSpan.classList.add("correct");
+            } else {
+                dSpan.classList.add("incorrect");
+            }
+        }
+        
+        if(d.type === "backspace") {
+            dSpan.classList.remove("correct", "incorrect");
+        }
+    }
+    renderState.deltas.length = 0;
+}
+    
+function renderClassic() {
+    if(renderState.onlyCharChange && !renderState.layoutDirty) {
+        renderDeltaBatch();
+    } else {
+        renderClassicMode();
+    }
+}
 
 
 //Mode system

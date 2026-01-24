@@ -124,7 +124,11 @@ body {
   top: 0;
   left: 0;
   transition: transform 0.08s linear;
-  animation: blink 1.3s step-start infinite;
+  animation: blink 1s step-start infinite;
+}
+
+#caret.moving {
+  animation: none;
 }
 
 @keyframes blink {
