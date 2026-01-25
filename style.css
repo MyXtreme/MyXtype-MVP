@@ -1,6 +1,17 @@
+:root {
+  --bg: #141823;     
+  --panel: #1b2030;
+  --text: #cbd5e1;
+  --muted: #64748b;
+  --correct: #e5e7eb;
+  --incorrect: #ef4444;
+  --caret: #60a5fa;
+}
+
 body {
-  font-family: sans-serif;
-  background: #f4f4f4;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text); 
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -12,17 +23,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
-  height: 50px;
+  padding: 0 16px;
+  height: 56px;
   width: 100%;
-  background: #f4f4f4;
-  border-bottom: 1px solid #eee;  
+  background: var(--panel);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   box-sizing: border-box;
 }
 
 .header h1 {
-  font-size: 1.2rem;
+  font-size: 1rem;
   margin: 0;
+  color: var(--text);
 }
 .header-right {
   display: flex;
@@ -38,24 +50,25 @@ body {
   position: absolute;
   top: 100%;    
   right: 0;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
   padding: 0.5rem 0;
   margin: 0;
   list-style: none;
-  min-width: 150px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  min-width: 160px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   z-index: 10;
 }
 
 .dropdown-list li {
-  padding: 8px 12px;
+  padding: 8px 14px;
   cursor: pointer;
+  color: var(--text);
 }
 
 .dropdown-list li:hover {
-  background: #f4f4f4;
+  background: rgba(255,255,255,0.05);
 }
 
 .dropdown.open .dropdown-list {
@@ -64,67 +77,93 @@ body {
 
 #mode,
 #profile {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   margin-left: 12px;
+  display: grid;
+  place-items: center;
+
+  background: rgba(255,255,255,0.08);
+  padding: 3px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+#mode:hover,
+#profile:hover {
+  background: rgba(255,255,255,0.15);
 }
 
 .main {
   width: 100%;
-  margin-top: 1rem;
-  background: white;
+  margin-top: 2rem;
+  background: transparent;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 32px 20px;
   box-sizing: border-box;
 }
 
 .main h1 {
-  margin: 0 0 10px 0;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+#timer {
+  font-size: 2.4rem;
+  margin: 16px 0 24px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text);
 }
 
 #quote {
   position: relative;
-  font-size: 18px;
-  margin-bottom: 20px;
+  font-size: 26px;
+  line-height: 2;
   font-family: monospace; 
   white-space: pre-wrap;
   text-align: center;
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
+  min-height: 220px;
   margin: 0 auto;
+  padding: 60px 0;
+
+  background: transparent;
   display: block;
   overflow: visible;
-
 }
 
 
 #quote span {
-  color: #bbb
+  color: var(--muted);
 }
 
 #quote span.correct {
-  color:black;
+  color:var(--correct);
 }
 
 #quote span.incorrect {
-  color:red;
+  color:var(--incorrect);
 }
 
 #caret {
   position: absolute;
-  width: 2px;
+  width: 2.5px;
   height: 1rem;
-  background: black;
+  background: var(--caret);
+  border-radius: 2px;
   z-index: 9999;
   top: 0;
   left: 0;
+  box-shadow: 0 0 8px rgba(96,165,250,.6);
   transition: transform 0.08s linear;
-  animation: blink 1s step-start infinite;
+  animation: blink 1.2s steps(1) infinite;
 }
 
 #caret.moving {
@@ -136,36 +175,36 @@ body {
   51%, 100% {opacity: 0}
 }
 
+.typing-line {
+  transition: opacity 0.35s ease;
+}
+
+
 #result {
-  margin-top: 20px;
-  font-weight: bold;
+  margin-top: 24px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
 }
 
 button {
-  margin: 5px;
-  padding: 6px 12px;
+  margin: 6px;
+  padding: 8px 16px;
   font-size: 0.9rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
   cursor: pointer;
-  background: #f9f9f9;
+  background: var(--panel);
+  color: var(--text);
 }
 
 button:hover {
-  background: #eee;
+  background: rgba(255,255,255,0.05);
 }
 
 #buttons {
   display: flex;
   justify-content: center;
-}
-#timer {
-  font-size: 2rem;
-  margin: 20px 0;
-  font-weight: bold;
-  text-align: center;
+  margin-top: 18px;
 }
 
-.typing-line {
-  
-}
