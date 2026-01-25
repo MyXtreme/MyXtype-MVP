@@ -85,6 +85,10 @@ function startEngine() {
 
     typingEngineState.lines = buildLines(typingEngineState.text);
 
+    requestAnimationFrame(() => {
+        render();
+        updateCaretPosition();
+    });
     resetRenderState();
     renderState.layoutDirty = true;
 }
@@ -259,8 +263,6 @@ function renderClassicMode() {
     textElement.appendChild(caretNode);
     typingEngineState.visibleCharMap = [];
 
-
-    
     const visibleStart = typingEngineState.visibleLinesIndex > 0 
                         ? typingEngineState.visibleLinesIndex - 1
                         : 0;
@@ -271,8 +273,6 @@ function renderClassicMode() {
 
     visibleLines.forEach(lineObj => {
         const div = document.createElement("div");
-        div.className = "typing-line";
-
         const fragment = document.createDocumentFragment();
 
         lineObj.text.split("").forEach((char, i) => {
@@ -475,6 +475,14 @@ document.addEventListener("keydown", (e) => {
         updateCaretPosition();
     });
 });
+
+window.addEventListener("resize", () => {
+    typingEngineState.lines = buildLines(typingEngineState.text);
+    renderState.layoutDirty = true;
+    render();
+    requestAnimationFrame(updateCaretPosition);
+});
+
 
 function getRandomInt(min, max) {
   min = Math.ceil(min);
