@@ -37,8 +37,8 @@ const typingEngineState = {
     ended: false,   //test
     charResults: [],
     visibleCharMap: [],
-    duration: 30,
-    timeLeft: 30,
+    duration: 60,
+    timeLeft: 60,
 
     wordstoGenerate: 60,
     visibleLinesIndex: 0,
@@ -146,9 +146,10 @@ function handleBackspace() {
 
 
 function showResult() {
-    /*const timeTaken =
-        (new Date() - typingEngineState.startTime) / 1000;*/
-    const timeTaken = typingEngineState.duration / 60;
+    const elapsedSeconds = typingEngineState.startTime
+                            ? Math.floor((Date.now() - typingEngineState.startTime.getTime())/1000)
+                            : (typingEngineState.duration - typingEngineState.timeLeft);
+    const timeTaken = Math.max(0.01, elapsedSeconds / 60);
 
     const correctChars = typingEngineState.charResults.filter(Boolean).length;
     const totalChars = typingEngineState.charResults.length;
@@ -398,7 +399,7 @@ nextBtn.addEventListener("click", () => {
 function resetTest() {
     stopTimer();
     startEngine();
-    timerElement.textContent = '0:30';
+    timerElement.textContent = '01:00';
     resultElement.textContent = "";
     render();
     updateCaretPosition();
@@ -406,7 +407,7 @@ function resetTest() {
 
 function nextTest() {
     startEngine();
-    timerElement.textContent = '0:30';
+    timerElement.textContent = '01:00';
     resultElement.textContent = "";
     render();
     updateCaretPosition();

@@ -175,10 +175,6 @@ body {
   51%, 100% {opacity: 0}
 }
 
-.typing-line {
-  transition: opacity 0.35s ease;
-}
-
 
 #result {
   margin-top: 24px;
