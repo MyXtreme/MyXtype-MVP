@@ -145,12 +145,9 @@ Privacy & Security
 - If you add analytics or remote storage later, disclose it in README and follow privacy best-practices.
 
 License
-- Add a LICENSE file. If you want a permissive license, include the MIT license.
+- This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 Contact / author
 - Mukhtar (MyXtreme) — open an issue or PR for questions.
 
 ---
-
-Notes for release text / short MVP description you can copy to GitHub release:
-"MyXtype v0.1.0 — MVP release. A client-only typing-test with per-character feedback, caret tracking, and timer. This release focuses on a fast, minimal typing experience. Known limitations: accessibility and mobile-specific input handling will be improved in future releases."
