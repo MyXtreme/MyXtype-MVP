@@ -19,6 +19,7 @@ Table of contents
 - Recommended tests
 - Known limitations (MVP)
 - Roadmap / planned features
+- Motivation
 - Contributing
 - License
 
@@ -86,7 +87,7 @@ Known limitations (intentional MVP decisions)
 - Modes: story / race / chat scaffolds currently re-use classic rendering; mode-specific behaviors (scoring, pacing) are not fully implemented.
 - Persistence and user profiles: no scoreboard, no local storage of best scores.
 - No automated CI or unit tests included yet (add before broader release).
-- Backspace going back from visible slice, not scroll back the previous line, probably crash the code now.
+- Backspace going back from visible slice, not scroll back the previous line and may cause error.
 - State of truthes of render and engine mixed at some parts. For now left unchanged
 
 Essential fixes to do before publishing (high priority)
@@ -116,6 +117,22 @@ Roadmap / suggested next features (post-MVP)
 - Difficulty levels, keyboard layouts, multi-language wordlists.
 - Save best scores locally and show progress.
 - Visual improvements: highlight current word, smoother caret animations using transform/translate3d.
+
+Motivation
+
+For many people today, fast and blind typing is not just a skill — it’s part of everyday workflow. We type constantly: messages, notes, essays, code. Ideally, typing should not steal our attention. The focus should be on what we are typing, not which key to press next.
+
+That’s why many typing training apps already exist. With this project, I want to contribute my own take on the problem.
+
+The core idea behind MyXtype is not only speed, but natural and conscious typing. Typing that feels closer to writing or thinking — where the content matters more than the keyboard. The MVP focuses on building a clean, distraction-free typing experience with a visible caret and per-character feedback, laying the foundation for more expressive modes.
+
+Beyond ordinary typing tests, the long-term vision includes modes that encourage meaningful typing:
+- Story mode — type real content such as stories, articles, or custom text uploaded by the user.
+- Race mode — compete with others to improve speed and consistency.
+- Chat mode — practice concise, thoughtful typing in a conversational environment, potentially with AI feedback.
+
+As AI and language models become part of daily work, typing in chat-like environments becomes increasingly common. Training this style — short, clear, idea-driven input with immediate feedback — is just as important as raw speed.
+This repository is my first serious step in this direction. It is intentionally released as an MVP, and I highly appreciate any advice, feedback, or contributions — whether technical, design-related, or conceptual.
 
 Contributing
 - Issues and PRs welcome. For PRs:
