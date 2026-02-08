@@ -23,6 +23,7 @@ document.body.appendChild(measurer);
 let currentMode = "classic";
 let timerID = null;
 let caretMoveTimeout = null;
+let spaceRepeating = 0;
 
 // Single source of truth or engine state
 const typingEngineState = {
@@ -99,9 +100,22 @@ function handleCharInput(typedChar) {
 
   typingEngineState.charResults[index] = isCorrect;
   if (expectedChar === " " && !isCorrect) {
+    spaceRepeating = 0;
     renderState.deltas.push({ type: "type", index });
     return;
+  } else if (expectedChar !== " " && typedChar === " ") {
+    if (spaceRepeating <= 3) {
+      renderState.prevIndex = index;
+      typingEngineState.index++;
+      renderState.newIndex = typingEngineState.index;
+      renderState.onlyCharChange = true;
+      renderState.deltas.push({ type: "type", index });
+      return;
+    }
+    renderState.deltas.push({ type: "morespace", index });
+    return;
   } else {
+    spaceRepeating = 0;
     renderState.prevIndex = index;
     typingEngineState.index++;
     renderState.newIndex = typingEngineState.index;
@@ -467,6 +481,7 @@ document.addEventListener("keydown", (e) => {
     handleBackspace();
   } else if (e.key === " ") {
     e.preventDefault();
+    spaceRepeating++;
     handleCharInput(" ");
   } else if (e.key.length === 1) {
     handleCharInput(e.key);
