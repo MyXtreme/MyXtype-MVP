@@ -20,29 +20,55 @@ measurer.style.letterSpacing = style.letterSpacing;
 measurer.style.fontSize = style.fontSize;
 document.body.appendChild(measurer);
 
-let currentMode = "classic";
-let timerID = null;
-let caretMoveTimeout = null;
-let spaceRepeating = 0;
-
-// Single source of truth or engine state
-const typingEngineState = {
-  text: "",
-  index: 0,
-  started: false, //timer
-  startTime: null,
-  ended: false, //test
-  charResults: [],
-  visibleCharMap: [],
+const defaults = {
+  mode: "classic",
   duration: 60,
-  timeLeft: 60,
-
-  wordstoGenerate: 60,
-  visibleLinesIndex: 0,
   maxVisibleLines: 3,
-  lines: [],
+  wordstoGenerate: 60,
+  wordsList: commonWords,
+  generationThreshold: 5, //if for this lines much close to last visible line
 };
 
+// State of text engine
+const engineState = {
+  //text generation
+  wordsList: defaults.wordsList,
+  wordstoGenerate: defaults.wordstoGenerate,
+
+  //text
+  text: "",
+  index: 0,
+  charCorrect: [],
+
+  mode: defaults.mode,
+};
+
+// State of time
+const sessionState = {
+  testStarted: false,
+  testEnded: false, //time finished or reached end of text
+  startTime: null,
+
+  //timer
+  duration: defaults.duration,
+  timeLeft: defaults.duration,
+  timerID: null,
+};
+
+// Geometry
+const layoutState = {
+  textLines: [],
+  currentLineIndex: 0,
+  maxVisibleLines: defaults.maxVisibleLines,
+};
+
+// Visible objects
+const viewState = {
+  visCharElementMap: [],
+  caretMoveTimeout: null,
+};
+
+//Mostly render delta state
 const renderState = {
   onlyCharChange: true,
   prevIndex: 0,
@@ -51,127 +77,222 @@ const renderState = {
   layoutDirty: false,
 };
 
-function resetRenderState() {
-  renderState.onlyCharChange = true;
-  renderState.deltas = [];
-  renderState.layoutDirty = false;
-}
+const inputState = {
+  lastKey: [],
+  spaceRepeated: 0,
+};
+
+//Single source of truth(SSoT)
+const appState = {
+  engine: engineState,
+  session: sessionState,
+  layout: layoutState,
+  view: viewState,
+  render: renderState,
+  input: inputState,
+};
 
 // Engine logic
 
-function startTest() {
-  typingEngineState.started = true;
-  typingEngineState.startTime = new Date();
-  startTimer();
+function startTest(sessionState) {
+  sessionState.testStarted = true;
+  sessionState.startTime = new Date();
+  startTimer(sessionState);
 }
 
-function startEngine() {
-  //typingEngineState.mode = mode;
-  typingEngineState.text = textGenerator();
+function resetEngine(engineState) {
+  engineState.text = textGenerator(
+    engineState.wordsList,
+    engineState.wordstoGenerate,
+  );
 
-  typingEngineState.index = 0;
-  typingEngineState.visibleLinesIndex = 0;
-  typingEngineState.started = false;
-  typingEngineState.ended = false;
-  typingEngineState.startTime = null;
-  typingEngineState.charResults = [];
-  typingEngineState.visibleCharMap = [];
-  typingEngineState.duration = 60;
-  typingEngineState.timeLeft = typingEngineState.duration;
+  engineState.index = 0;
+  engineState.charCorrect = [];
+}
 
-  typingEngineState.lines = buildLines(typingEngineState.text);
+function resetLayout(layoutState) {
+  layoutState.currentLineIndex = 0;
+  layoutState.textLines = buildLines(appState.engine.text);
+}
 
-  requestAnimationFrame(() => {
-    render();
-    updateCaretPosition();
-  });
-  resetRenderState();
+function resetSession(sessionState) {
+  sessionState.testStarted = false;
+  sessionState.testEnded = false;
+  sessionState.startTime = null;
+  sessionState.timeLeft = sessionState.duration;
+}
+
+function resetView(viewState) {
+  viewState.visCharElementMap = [];
+  viewState.caretMoveTimeout = null;
+}
+
+function resetRender(renderState) {
+  renderState.onlyCharChange = false;
+  renderState.deltas = [];
   renderState.layoutDirty = true;
 }
 
-function handleCharInput(typedChar) {
-  if (typingEngineState.ended) return;
-  if (!typingEngineState.started) startTest();
+//handlers
+function handleStart(appState) {
+  resetEngine(appState.engine);
+  resetLayout(appState.layout);
+  resetSession(appState.session);
+  resetView(appState.view);
+  resetRender(appState.render);
 
-  const index = typingEngineState.index;
-  if (index >= typingEngineState.text.length) return;
-  const expectedChar = typingEngineState.text[index];
-  const isCorrect = typedChar === expectedChar;
+  handleRender(modes, appState.engine.mode);
+  requestAnimationFrame(() => {
+    updateCaretPosition(appState.view, appState.engine.index);
+  });
+}
 
-  typingEngineState.charResults[index] = isCorrect;
-  if (expectedChar === " " && !isCorrect) {
-    spaceRepeating = 0;
-    renderState.deltas.push({ type: "type", index });
-    return;
-  } else if (expectedChar !== " " && typedChar === " ") {
-    if (spaceRepeating <= 3) {
-      renderState.prevIndex = index;
-      typingEngineState.index++;
-      renderState.newIndex = typingEngineState.index;
-      renderState.onlyCharChange = true;
-      renderState.deltas.push({ type: "type", index });
-      return;
-    }
-    renderState.deltas.push({ type: "morespace", index });
-    return;
+function handleResize(appState) {
+  appState.layout.textLines = buildLines(appState.engine.text);
+  appState.render.layoutDirty = true;
+}
+
+function handleKeydown(appState, key) {
+  if (appState.session.testEnded) return;
+  if (!appState.session.testStarted) startTest(appState.session);
+
+  const index = appState.engine.index;
+  const expectedChar = appState.engine.text[index];
+  appState.engine.charCorrect[index] = key === expectedChar;
+
+  if (key === "Backspace") {
+    typedBackspace(appState);
+  } else if (key === " ") {
+    typedSpace(appState);
+  } else if (/^[a-zA-Z0-9]$/.test(key)) {
+    typedAlphameric(appState);
   } else {
-    spaceRepeating = 0;
-    renderState.prevIndex = index;
-    typingEngineState.index++;
-    renderState.newIndex = typingEngineState.index;
-    renderState.onlyCharChange = true;
-    renderState.deltas.push({ type: "type", index });
+    typedSymbols(appState); //temporarly <------------------------ don't forget
   }
 
-  const lastVisibleLine =
-    typingEngineState.visibleLinesIndex + typingEngineState.maxVisibleLines;
-  const totalLines = typingEngineState.lines.length;
-  if (totalLines - lastVisibleLine < 5) {
-    typingEngineState.text += textGenerator();
-    typingEngineState.lines = buildLines(typingEngineState.text);
-    renderState.layoutDirty = true;
+  if (shouldGenerate(appState.layout, defaults.generationThreshold)) {
+    appState.engine.text += textGenerator(
+      appState.engine.wordsList,
+      appState.engine.wordstoGenerate,
+    );
+    appState.layout.textLines = buildLines(appState.engine.text);
+    appState.render.layoutDirty = true;
   }
-  const oldLine = typingEngineState.visibleLinesIndex;
-  updateWindow(typingEngineState.lines);
 
-  if (typingEngineState.visibleLinesIndex !== oldLine) {
-    renderState.onlyCharChange = false;
-    renderState.layoutDirty = true;
+  updateWindow(appState.layout, appState.engine.index);
+
+  if (lineChanged(appState.layout, appState.render)) {
+    appState.render.onlyCharChange = false;
+    appState.render.layoutDirty = true;
   }
 }
 
-function handleBackspace() {
-  if (typingEngineState.index <= 0) return;
-  const currentLineIndex = typingEngineState.lines.findIndex(
-    (line) =>
-      typingEngineState.index >= line.start &&
-      typingEngineState.index <= line.end,
-  );
-  const currentLine = typingEngineState.lines[currentLineIndex];
+function handleRender(appState, modes = modes) {
+  const mode = appState.engine.mode;
+  if (
+    appState.render.layoutDirty &&
+    !appState.engine.text.length &&
+    !appState.session.testStarted
+  ) {
+    setMode(appState, mode, modes);
+  } else {
+    if (
+      appState.render.onlyCharChange &&
+      !appState.render.layoutDirty &&
+      appState.view.visCharElementMap.length
+    ) {
+      renderDeltaBatch(
+        appState.render,
+        appState.view,
+        appState.engine.charCorrect,
+      );
+    } else {
+      modes[mode].render(appState);
+    }
+  }
+}
 
-  if (typingEngineState.index === currentLine.start) {
+function typedSpace(appState) {
+  const index = appState.engine.index;
+  if (index >= appState.engine.text.length) return;
+
+  appState.input.spaceRepeated++;
+
+  if (appState.engine.charCorrect[index]) {
+    if (appState.input.spaceRepeated <= 3) {
+      appState.render.prevIndex = index;
+      appState.engine.index++;
+      appState.render.newIndex = appState.engine.index;
+      appState.render.onlyCharChange = true;
+      appState.render.deltas.push({ type: "space", index });
+      return;
+    }
+    appState.render.deltas.push({ type: "repeated-space", index });
+    return;
+  }
+}
+
+function typedAlphameric(appState) {
+  const index = appState.engine.index;
+  appState.input.spaceRepeated = 0;
+  appState.render.prevIndex = index;
+  appState.engine.index++;
+  appState.render.newIndex = appState.engine.index;
+  appState.render.onlyCharChange = true;
+  appState.render.deltas.push({ type: "alphameric", index });
+}
+function typedSymbols(appState) {
+  const index = appState.engine.index;
+  appState.input.spaceRepeated = 0;
+  appState.render.prevIndex = index;
+  appState.engine.index++;
+  appState.render.newIndex = appState.engine.index;
+  appState.render.onlyCharChange = true;
+  appState.render.deltas.push({ type: "symbols", index });
+}
+
+function lineChanged(layoutState, renderState) {
+  const prevIndex = renderState.prevIndex;
+  const newIndex = renderState.newIndex;
+  if (newIndex < 0 || prevIndex === 0) return;
+  const prevIndexLine = layoutState.textLines.findIndex(
+    (line) => prevIndex >= line.start && prevIndex <= line.end,
+  );
+  const newIndexLine = layoutState.textLines.findIndex(
+    (line) => newIndex > line.start && newIndex <= line.end,
+  );
+  return prevIndexLine !== newIndexLine;
+}
+
+function typedBackspace(appState) {
+  if (appState.engine.index <= 0) return;
+
+  let prevIndex = appState.engine.index;
+  let newIndex = appState.engine.index - 1;
+  if (lineChanged(appState.layout, appState.render)) {
     return;
   }
 
-  renderState.prevIndex = typingEngineState.index;
-  typingEngineState.index--;
-  typingEngineState.charResults.pop();
-  renderState.newIndex = typingEngineState.index;
-  renderState.onlyCharChange = true;
-  renderState.deltas.push({
+  appState.engine.index--;
+  appState.engine.charCorrect.pop();
+
+  appState.render.prevIndex = prevIndex;
+  appState.render.newIndex = newIndex;
+  appState.render.onlyCharChange = true;
+  appState.render.deltas.push({
     type: "backspace",
-    index: typingEngineState.index,
+    index: newIndex,
   });
 }
 
 function showResult() {
-  const elapsedSeconds = typingEngineState.startTime
-    ? Math.floor((Date.now() - typingEngineState.startTime.getTime()) / 1000)
-    : typingEngineState.duration - typingEngineState.timeLeft;
+  const elapsedSeconds = appState.session.startTime
+    ? Math.floor((Date.now() - appState.session.startTime.getTime()) / 1000)
+    : appState.session.duration - appState.session.timeLeft;
   const timeTaken = Math.max(0.01, elapsedSeconds / 60);
 
-  const correctChars = typingEngineState.charResults.filter(Boolean).length;
-  const totalChars = typingEngineState.charResults.length;
+  const correctChars = appState.engine.charCorrect.filter(Boolean).length;
+  const totalChars = appState.engine.charCorrect.length;
 
   const accuracy = totalChars === 0 ? 0 : (correctChars / totalChars) * 100;
   const raw = totalChars / 5 / timeTaken;
@@ -184,15 +305,27 @@ function showResult() {
     `;
 }
 
-function textGenerator(wordsInLine = typingEngineState.wordstoGenerate) {
+function textGenerator(
+  wordsList = defaults.wordsList,
+  wordstoGenerate = defaults.wordstoGenerate,
+) {
   let words = [];
 
-  for (let i = 0; i < wordsInLine; i++) {
-    const randomWord = commonWords[getRandomInt(0, commonWords.length)];
+  for (let i = 0; i < wordstoGenerate; i++) {
+    const randomWord = wordsList[getRandomInt(0, wordsList.length)];
     words.push(randomWord);
   }
 
   return words.join(" ") + " ";
+}
+
+function shouldGenerate(layoutState, threshold) {
+  const currentLineIndex = layoutState.currentLineIndex;
+  const maxVisibleLines = layoutState.maxVisibleLines;
+  const totalLines = layoutState.textLines.length;
+  const lastVisibleLine = currentLineIndex + maxVisibleLines;
+  const linesLefttoThreshold = totalLines - lastVisibleLine;
+  return linesLefttoThreshold <= threshold;
 }
 
 function buildLines(text, containerElement = textElement) {
@@ -237,24 +370,22 @@ function buildLines(text, containerElement = textElement) {
   return lines;
 }
 
-function updateWindow(lines) {
+function updateWindow(layoutState, index) {
+  const lines = layoutState.textLines;
   const currentLineIndex = lines.findIndex(
-    (line) =>
-      typingEngineState.index >= line.start &&
-      typingEngineState.index <= line.end,
+    (line) => index >= line.start && engine.index <= line.end,
   );
 
   if (
     currentLineIndex !== -1 &&
-    currentLineIndex > typingEngineState.visibleLinesIndex
+    currentLineIndex > layoutState.currentLineIndex
   ) {
-    typingEngineState.visibleLinesIndex = currentLineIndex;
+    layoutState.currentLineIndex = currentLineIndex;
   }
 }
 
-function updateCaretPosition() {
-  const i = typingEngineState.index;
-  const map = typingEngineState.visibleCharMap;
+function updateCaretPosition(viewState, i) {
+  const map = viewState.visCharElementMap;
   if (!map || map.length === 0) return;
 
   const containerRect = textElement.getBoundingClientRect();
@@ -269,28 +400,27 @@ function updateCaretPosition() {
   caret.style.transform = `translate(${x - containerRect.left}px, ${rect.top - containerRect.top}px)`;
   caret.style.height = rect.height + "px";
 
-  clearTimeout(caretMoveTimeout);
-  caretMoveTimeout = setTimeout(() => caret.classList.remove("moving"), 480);
+  clearTimeout(viewState.caretMoveTimeout);
+  viewState.caretMoveTimeout = setTimeout(
+    () => caret.classList.remove("moving"),
+    480,
+  );
 }
 
 //Mode renderer
-function renderClassicMode() {
+function renderClassicMode(layoutState, renderState, viewState, charCorrect) {
   const caretNode = caret;
   textElement.innerHTML = "";
   textElement.appendChild(caretNode);
-  typingEngineState.visibleCharMap = [];
+  viewState.visCharElementMap = [];
 
   const visibleStart =
-    typingEngineState.visibleLinesIndex > 0
-      ? typingEngineState.visibleLinesIndex - 1
-      : 0;
+    layoutState.currentLineIndex > 0 ? layoutState.currentLineIndex - 1 : 0;
   const visibleEnd =
-    typingEngineState.visibleLinesIndex === 0
-      ? typingEngineState.visibleLinesIndex + typingEngineState.maxVisibleLines
-      : typingEngineState.visibleLinesIndex +
-        typingEngineState.maxVisibleLines -
-        1;
-  const visibleLines = typingEngineState.lines.slice(visibleStart, visibleEnd);
+    layoutState.currentLineIndex === 0
+      ? layoutState.currentLineIndex + layoutState.maxVisibleLines
+      : layoutState.currentLineIndex + layoutState.maxVisibleLines - 1;
+  const visibleLines = layoutState.textLines.slice(visibleStart, visibleEnd);
 
   visibleLines.forEach((lineObj) => {
     const div = document.createElement("div");
@@ -301,15 +431,15 @@ function renderClassicMode() {
       const span = document.createElement("span");
       span.textContent = char;
 
-      if (realIndex < typingEngineState.index) {
-        if (typingEngineState.charResults[realIndex]) {
+      if (realIndex < appState.engine.index) {
+        if (charCorrect[realIndex]) {
           span.classList.add("correct");
         } else {
           span.classList.add("incorrect");
         }
       }
 
-      typingEngineState.visibleCharMap[realIndex] = span;
+      viewState.visCharElementMap[realIndex] = span;
       fragment.appendChild(span);
     });
 
@@ -317,22 +447,22 @@ function renderClassicMode() {
 
     textElement.appendChild(div);
   });
-  resetRenderState();
+  renderState.layoutDirty = false;
 }
 
-function renderDeltaBatch() {
+function renderDeltaBatch(renderState, viewState, charCorrect) {
   for (let d of renderState.deltas) {
     const i = d.index;
-    const span = typingEngineState.visibleCharMap[i];
+    const span = viewState.visCharElementMap[i];
 
     if (!span) continue;
 
     span.classList.remove("correct", "incorrect");
 
-    if (d.type === "type") {
-      if (typingEngineState.charResults[i] === true) {
+    if (d.type === "type" || d.type === "space") {
+      if (charCorrect[i] === true) {
         span.classList.add("correct");
-      } else if (typingEngineState.charResults[i] === false) {
+      } else if (charCorrect[i] === false) {
         span.classList.add("incorrect");
       }
     }
@@ -340,50 +470,153 @@ function renderDeltaBatch() {
   renderState.deltas.length = 0;
 }
 
-function renderClassic() {
-  if (
-    renderState.onlyCharChange &&
-    !renderState.layoutDirty &&
-    typingEngineState.visibleCharMap.length
-  ) {
-    renderDeltaBatch();
-  } else {
-    renderClassicMode();
-  }
-}
-
 //Mode system
 const modes = {
   classic: {
-    start: () => startEngine(),
-    render: () => renderClassic(),
+    start: (appState) => handleStart(appState),
+    render: (appState) =>
+      renderClassicMode(
+        appState.render,
+        appState.layout,
+        appState.view,
+        appState.engine.charCorrect,
+      ),
   },
 
   story: {
-    start: () => startEngine(),
-    render: () => renderClassic(),
+    start: () => handleStart(appState),
+    render: (appState) =>
+      renderClassicMode(
+        appState.render,
+        appState.layout,
+        appState.view,
+        appState.engine.charCorrect,
+      ),
   },
 
   race: {
-    start: () => startEngine(),
-    render: () => renderClassic(),
+    start: () => handleStart(appState),
+    render: (appState) =>
+      renderClassicMode(
+        appState.render,
+        appState.layout,
+        appState.view,
+        appState.engine.charCorrect,
+      ),
   },
 };
-function render() {
-  modes[currentMode].render();
+
+function setMode(appState, mode, modes = modes) {
+  appState.engine.mode = mode;
+  modes[mode].start(appState);
+  modes[mode].render(appState);
+  updateCaretPosition(appState.view, appState.engine.index);
 }
 
-function setMode(mode) {
-  currentMode = mode;
-  modes[mode].start();
-  modes[mode].render();
-  updateCaretPosition();
+//Input layer
+
+function resetTest(appState) {
+  stopTimer(appState.session);
+  handleStart(appState);
+  timerElement.textContent = "01:00";
+  resultElement.textContent = "";
+  handleRender(modes, appState.engine.mode);
+  updateCaretPosition(appState.view, appState.engine.index);
 }
+
+function nextTest(appState) {
+  handleStart(appState);
+  timerElement.textContent = "01:00";
+  resultElement.textContent = "";
+  handleRender(modes, appState.engine.mode);
+  updateCaretPosition(appState.view, appState.engine.index);
+}
+
+function startTimer(sessionState) {
+  if (sessionState.timerID !== null) return;
+  if (!sessionState.startTime) {
+    sessionState.startTime = new Date();
+  }
+
+  sessionState.timerID = setInterval(() => {
+    const now = Date.now();
+    const start = sessionState.startTime?.getTime();
+    if (!start) return;
+
+    const timePassed = Math.floor((now - start) / 1000);
+    sessionState.timeLeft = Math.max(0, sessionState.duration - timePassed);
+
+    if (sessionState.timeLeft === 0) {
+      stopTimer(sessionState);
+      sessionState.testEnded = true;
+      showResult();
+    }
+
+    const seconds = sessionState.timeLeft % 60;
+    const minutes = Math.floor(sessionState.timeLeft / 60);
+    timerElement.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }, 1000);
+
+  //Stopwatch
+  /*sessionState.timerID = setInterval(() => {
+        const timeStamp = new Date();
+        const timePassed = Math.floor((timeStamp - appState.session.startTime) / 1000);
+        const seconds = timePassed % 60;
+        const minutes = Math.floor(timePassed / 60);
+        timerElement.textContent = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    }, 1000);*/
+}
+
+function stopTimer(sessionState) {
+  if (sessionState.timerID !== null) {
+    clearInterval(sessionState.timerID);
+    sessionState.timerID = null;
+  }
+}
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
+handleRender(appState, modes); //First real action begin, not loading function, but executing them
+//Event listeners
+document.addEventListener("keydown", (e) => {
+  if (appState.session.testEnded) return;
+  if (e.key === "Backspace" || e.key === "Spacebar") {
+    e.preventDefault();
+  }
+
+  handleKeydown(appState, e.key);
+  handleRender(modes, appState.engine.mode);
+  requestAnimationFrame(() => {
+    updateCaretPosition(appState.view, appState.engine.index);
+  });
+});
+
+window.addEventListener("resize", () => {
+  handleResize(appState);
+  handleRender(modes, appState.engine.mode);
+  requestAnimationFrame(() => {
+    updateCaretPosition(appState.view, appState.engine.index);
+  });
+});
+
+resetBtn.addEventListener("click", () => {
+  resetTest(appState);
+  resetBtn.blur();
+});
+
+nextBtn.addEventListener("click", () => {
+  nextTest(appState);
+  nextBtn.blur();
+});
 
 modeList.addEventListener("click", (e) => {
   if (e.target.tagName === "LI") {
     dropdown.classList.remove("open");
-    setMode(e.target.dataset.mode);
+    setMode(appState, e.target.dataset.mode, modes);
   }
 });
 
@@ -396,112 +629,3 @@ document.addEventListener("click", (e) => {
     dropdown.classList.remove("open");
   }
 });
-
-setMode(currentMode); //First real action begin, not loading function, but executing them
-//Input layer
-
-//Event listeners
-
-resetBtn.addEventListener("click", () => {
-  resetTest();
-  resetBtn.blur();
-});
-nextBtn.addEventListener("click", () => {
-  nextTest();
-  nextBtn.blur();
-});
-
-function resetTest() {
-  stopTimer();
-  startEngine();
-  timerElement.textContent = "01:00";
-  resultElement.textContent = "";
-  render();
-  updateCaretPosition();
-}
-
-function nextTest() {
-  startEngine();
-  timerElement.textContent = "01:00";
-  resultElement.textContent = "";
-  render();
-  updateCaretPosition();
-}
-
-function startTimer() {
-  if (timerID !== null) return;
-  if (!typingEngineState.startTime) {
-    typingEngineState.startTime = new Date();
-  }
-
-  timerID = setInterval(() => {
-    const now = Date.now();
-    const start = typingEngineState.startTime?.getTime();
-    if (!start) return;
-
-    const timePassed = Math.floor((now - start) / 1000);
-    typingEngineState.timeLeft = Math.max(
-      0,
-      typingEngineState.duration - timePassed,
-    );
-
-    if (typingEngineState.timeLeft === 0) {
-      stopTimer();
-      typingEngineState.ended = true;
-      showResult();
-    }
-
-    const seconds = typingEngineState.timeLeft % 60;
-    const minutes = Math.floor(typingEngineState.timeLeft / 60);
-    timerElement.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  }, 1000);
-
-  //Stopwatch
-  /*timerID = setInterval(() => {
-        const timeStamp = new Date();
-        const timePassed = Math.floor((timeStamp - typingEngineState.startTime) / 1000);
-        const seconds = timePassed % 60;
-        const minutes = Math.floor(timePassed / 60);
-        timerElement.textContent = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-    }, 1000);*/
-}
-
-function stopTimer() {
-  if (timerID !== null) {
-    clearInterval(timerID);
-    timerID = null;
-  }
-}
-
-document.addEventListener("keydown", (e) => {
-  if (typingEngineState.ended) return;
-
-  if (e.key === "Backspace") {
-    e.preventDefault();
-    handleBackspace();
-  } else if (e.key === " ") {
-    e.preventDefault();
-    spaceRepeating++;
-    handleCharInput(" ");
-  } else if (e.key.length === 1) {
-    handleCharInput(e.key);
-  }
-
-  render();
-  requestAnimationFrame(() => {
-    updateCaretPosition();
-  });
-});
-
-window.addEventListener("resize", () => {
-  typingEngineState.lines = buildLines(typingEngineState.text);
-  renderState.layoutDirty = true;
-  render();
-  requestAnimationFrame(updateCaretPosition);
-});
-
-function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min)) + min;
-}
