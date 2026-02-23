@@ -35,7 +35,7 @@ export function typedBackspace(appState, lineChanged) {
   appState.render.onlyCharChange = true;
   appState.render.deltas.push({
     type: "backspace",
-    index: appState.render.prevIndex,
+    index: appState.engine.index,
   });
 }
 
@@ -70,11 +70,13 @@ export function typedAlphameric(appState) {
 }
 
 export function typedSymbols(appState) {
+  /*
   const index = appState.engine.index;
   appState.input.spaceRepeated = 0;
   appState.render.prevIndex = index;
   appState.engine.index++;
   appState.render.newIndex = appState.engine.index;
   appState.render.onlyCharChange = true;
-  appState.render.deltas.push({ type: "symbols", index });
+  appState.render.deltas.push({ type: "symbols", index });*/
+  console.log("modifier keys typed");
 }

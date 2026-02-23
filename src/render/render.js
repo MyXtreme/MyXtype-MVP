@@ -68,7 +68,9 @@ export function renderDeltaBatch(appState) {
     }
 
     span.classList.remove("correct", "incorrect");
-    console.log("render sees delta:", d.type, d.index, d);
+    console.log("render sees delta:", d);
+    console.log("Map length:", appState.view.visCharElementMap.length);
+    console.log("Text length:", appState.engine.text.length);
 
     if (d.type === "alphameric" || d.type === "space") {
       if (appState.engine.charCorrect[i] === true) {
