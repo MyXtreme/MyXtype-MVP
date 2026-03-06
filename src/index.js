@@ -2,8 +2,6 @@ import { commonWords } from "../words.js";
 import { createAppState } from "./state.js";
 import { createController } from "./controller/controller.js";
 
-console.log("it reached index.js");
-
 const textElement = document.getElementById("quote");
 const resultElement = document.getElementById("result");
 const timerElement = document.getElementById("timer");
@@ -40,14 +38,10 @@ const controller = createController(appState, dom);
 function resetTest() {
   //stopTimer(appState.session);
   controller.init(true);
-  timerElement.textContent = "01:00";
-  resultElement.textContent = "";
 }
 
 function nextTest() {
   controller.init();
-  timerElement.textContent = "01:00";
-  resultElement.textContent = "";
 }
 
 controller.init(); //here app initializes
@@ -79,7 +73,7 @@ nextBtn.addEventListener("click", () => {
 modeList.addEventListener("click", (e) => {
   if (e.target.tagName === "LI") {
     dropdown.classList.remove("open");
-    setMode(appState, e.target.dataset.mode, modes);
+    controller.setMode(appState, e.target.dataset.mode);
   }
 });
 

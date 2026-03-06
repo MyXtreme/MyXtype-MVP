@@ -153,6 +153,12 @@ export function createController(appState, dom) {
     }
   }
 
+  function handleTimerElement(appState, sessionDom) {
+    const { minutes, seconds } = modes[appState.engine.mode].strategy();
+    sessionDom.timer.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    sessionDom.result.textContent = "";
+  }
+
   function setMode(appState, mode) {
     appState.engine.mode = mode;
     modes[mode].start();
@@ -162,7 +168,8 @@ export function createController(appState, dom) {
 
   function init(isRestart = false) {
     handleStart(isRestart);
+    handleTimerElement(appState, sessionDom);
   }
 
-  return { init, handleKeydown, handleResize };
+  return { init, handleKeydown, handleResize, setMode };
 }
