@@ -1,4 +1,5 @@
 export function resetSession(sessionState) {
+  stopInterval(sessionState);
   sessionState.testStarted = false;
   sessionState.testEnded = false;
   sessionState.startTime = null;
@@ -12,7 +13,9 @@ export function startTest(sessionState) {
 
 export function updateTimer(sessionState) {
   if (!sessionState.startTime) {
-    sessionState.startTime = new Date();
+    const seconds = sessionState.timeLeft % 60;
+    const minutes = Math.floor(sessionState.timeLeft / 60);
+    return { minutes, seconds };
   }
   const now = Date.now();
   const start = sessionState.startTime?.getTime();

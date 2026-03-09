@@ -153,23 +153,68 @@ export function createController(appState, dom) {
     }
   }
 
-  function handleTimerElement(appState, sessionDom) {
-    const { minutes, seconds } = modes[appState.engine.mode].strategy();
-    sessionDom.timer.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    sessionDom.result.textContent = "";
+  function handleTimer(
+    isTimerClicked = false,
+    isTimerOptionClicked = false,
+    timeData = null,
+  ) {
+    if (isTimerClicked) {
+      sessionDom.timer.innerHTML = `
+      <button data-time="30">30s</button>
+      <button data-time="60">60s</button>
+      <button data-time="custom">custom</button>
+      `;
+      return;
+    }
+    if (isTimerOptionClicked) {
+      if (timeData === "custom") {
+        sessionDom.timer.innerHTML = `<input type="number" min="5" max="600" placeholder="seconds">`;
+
+        const input = sessionDom.timer.querySelector("input");
+        input.className = "timer-custom-input";
+
+        input.focus();
+        input.select();
+
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && input.checkValidity) {
+            const seconds = Number(input.value);
+            if (!seconds) return;
+
+            setTimerDuration(true, seconds);
+          }
+        });
+        return;
+      }
+      const isdurationChanged =
+        timeData === appState.session.duration ? false : true;
+      setTimerDuration(isdurationChanged, Number(timeData));
+      return;
+    }
+    setTimerDuration(false, null);
   }
 
   function setMode(appState, mode) {
     appState.engine.mode = mode;
     modes[mode].start();
     modes[mode].render();
-    updateCaretPosition(appState.view, appState.engine.index, renderDom);
+    render.updateCaretPosition(appState.view, appState.engine.index, renderDom);
+  }
+
+  function setTimerDuration(isDurationChanged = false, duration = null) {
+    if (isDurationChanged) {
+      appState.session.duration = duration;
+      appState.session.timeLeft = duration;
+    }
+    const { minutes, seconds } = modes[appState.engine.mode].strategy();
+    sessionDom.timer.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    sessionDom.result.textContent = "";
   }
 
   function init(isRestart = false) {
     handleStart(isRestart);
-    handleTimerElement(appState, sessionDom);
+    handleTimer();
   }
 
-  return { init, handleKeydown, handleResize, setMode };
+  return { init, handleKeydown, handleResize, handleTimer, setMode };
 }
