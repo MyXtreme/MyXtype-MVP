@@ -48,6 +48,7 @@ controller.init(); //here app initializes
 
 //event listeners
 document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
   if (appState.session.testEnded) return;
   if (e.key === "Backspace" || e.key === "Spacebar") {
     e.preventDefault();
@@ -58,6 +59,19 @@ document.addEventListener("keydown", (e) => {
 
 window.addEventListener("resize", () => {
   controller.handleResize();
+});
+
+timerElement.addEventListener("click", (e) => {
+  if (appState.engine.mode !== "classic" || appState.session.testStarted)
+    return;
+
+  const value = e.target.dataset.time;
+
+  if (value) {
+    controller.handleTimer(false, true, value);
+  } else {
+    controller.handleTimer(true);
+  }
 });
 
 resetBtn.addEventListener("click", () => {

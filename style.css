@@ -130,6 +130,69 @@ body {
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--text);
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border-color: var(--muted);
+}
+
+#timer:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#timer button {
+  font-size: 1rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+}
+
+#timer button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.timer-custom-input {
+  width: 120px;
+  height: 40px;
+
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  background: var(--panel);
+  color: var(--text);
+
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 600;
+
+  outline: none;
+}
+
+.timer-custom-input:focus {
+  border-color: var(--caret);
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.2);
+}
+
+.timer-custom-input:invalid {
+  border-color: var(--incorrect);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.2);
+}
+
+.timer-custom-input::-webkit-inner-spin-button,
+.timer-custom-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.timer-custom-input {
+  appearance: textfield;
 }
 
 #quote {
